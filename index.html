@@ -2,227 +2,386 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Heladera Patrick</title>
-<!-- Librería MQTT para el navegador via WebSocket -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
-  :root{--bg:#0a0e1a;--panel:#111827;--border:#1e3a5f;--accent:#00d4ff;--g:#00ff88;--o:#ff6b35;--y:#ffd700;--r:#ff4444;--b:#4488ff;--dim:#4a6080;--text:#c8d8e8}
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monospace;padding:16px;
-    background-image:radial-gradient(ellipse at 20% 20%,rgba(0,212,255,.04) 0%,transparent 60%),
-    linear-gradient(rgba(0,212,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,.02) 1px,transparent 1px);
-    background-size:100%,40px 40px,40px 40px}
-  h1{font-family:'Orbitron',sans-serif;font-size:clamp(12px,4vw,20px);color:var(--accent);
-    text-align:center;letter-spacing:3px;margin-bottom:3px;text-shadow:0 0 20px rgba(0,212,255,.4)}
-  .sub{text-align:center;color:var(--dim);font-size:9px;letter-spacing:2px;margin-bottom:16px}
-  .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px}
-  .stitle{font-family:'Orbitron',sans-serif;font-size:9px;color:var(--accent);letter-spacing:3px;
-    text-transform:uppercase;margin-bottom:10px;padding-bottom:5px;border-bottom:1px solid var(--border)}
-  .g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
-  @media(max-width:400px){.g2{grid-template-columns:1fr}}
 
-  /* conexión */
-  .conn-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:7px;
-    background:#050810;border:1px solid var(--border);margin-bottom:12px;font-size:10px}
-  .conn-dot{width:10px;height:10px;border-radius:50%;background:#555;flex-shrink:0;transition:all .4s}
-  .conn-dot.ok{background:var(--g);box-shadow:0 0 8px var(--g)}
-  .conn-dot.err{background:var(--r);box-shadow:0 0 8px var(--r)}
-  .conn-dot.wait{background:var(--y);box-shadow:0 0 8px var(--y);animation:blink 1s infinite}
+  :root {
+    --bg: #0a0e1a;
+    --panel: #111827;
+    --border: #1e3a5f;
+    --accent: #00d4ff;
+    --accent2: #00ff88;
+    --accent3: #ff6b35;
+    --warn: #ffd700;
+    --text: #c8d8e8;
+    --dim: #4a6080;
+    --r: #ff4444;
+    --b: #4488ff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    padding: 20px 16px;
+    background-image:
+      radial-gradient(ellipse at 20% 20%, rgba(0,212,255,0.04) 0%, transparent 60%),
+      linear-gradient(rgba(0,212,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.02) 1px, transparent 1px);
+    background-size: 100%, 40px 40px, 40px 40px;
+  }
+  h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(13px, 4vw, 22px);
+    color: var(--accent);
+    text-align: center;
+    letter-spacing: 3px;
+    margin-bottom: 4px;
+    text-shadow: 0 0 20px rgba(0,212,255,0.4);
+  }
+  .subtitle { text-align:center; color:var(--dim); font-size:10px; letter-spacing:2px; margin-bottom:20px; }
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:18px; margin-bottom:16px; }
+  .section-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px; }
+  @media(max-width:500px){ .grid2{grid-template-columns:1fr;} }
+
+  /* ── Conexión ── */
+  .conn-bar {
+    display:flex; align-items:center; gap:8px; padding:8px 12px;
+    border-radius:7px; background:#050810; border:1px solid var(--border);
+    margin-bottom:12px; font-size:10px;
+  }
+  .conn-dot { width:10px; height:10px; border-radius:50%; background:#555; flex-shrink:0; transition:all .4s; }
+  .conn-dot.ok  { background:var(--accent2); box-shadow:0 0 8px var(--accent2); }
+  .conn-dot.err { background:var(--r); box-shadow:0 0 8px var(--r); }
+  .conn-dot.wait{ background:var(--warn); box-shadow:0 0 8px var(--warn); animation:blink 1s infinite; }
   @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
 
-  /* temps */
-  .trow{display:flex;justify-content:space-around;margin-bottom:12px}
-  .tbox{text-align:center}
-  .tbox .zone{font-size:8px;color:var(--dim);letter-spacing:2px;margin-bottom:3px}
-  .tbox .val{font-family:'Orbitron',sans-serif;font-size:34px;font-weight:900;line-height:1}
-  .tbox .deg{font-size:11px;color:var(--dim)}
+  /* ── Alerta ── */
+  .alerta-box {
+    display:none; padding:12px 14px; border-radius:8px;
+    border:1px solid var(--r); background:rgba(255,68,68,.08);
+    margin-bottom:14px; font-size:11px; line-height:1.6;
+    animation:pulse 2s infinite;
+  }
+  .alerta-box.warn { border-color:var(--warn); background:rgba(255,215,0,.06); }
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.75}}
 
-  /* compresor */
-  .srow{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;
-    background:#050810;border:1px solid var(--border);border-radius:7px;margin-bottom:10px}
-  .dot{width:14px;height:14px;border-radius:50%;background:var(--b);box-shadow:0 0 8px var(--b);transition:all .4s}
-  .dot.on{background:var(--r);box-shadow:0 0 12px var(--r)}
-  .slbl{font-size:11px}.slbl span{color:var(--accent);font-family:'Orbitron',sans-serif;font-size:9px}
-  .pausa{font-size:9px;color:var(--dim);text-align:center}
-  .pausa span{color:var(--y)}
+  /* ── Estado compresor ── */
+  .status-row {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 16px; background:#050810;
+    border:1px solid var(--border); border-radius:8px; margin-bottom:14px;
+  }
+  .status-dot { width:14px; height:14px; border-radius:50%; background:var(--b); box-shadow:0 0 8px var(--b); transition:all .4s; }
+  .status-dot.on { background:var(--r); box-shadow:0 0 12px var(--r); }
+  .status-label { font-size:12px; }
+  .status-label span { color:var(--accent); font-family:'Orbitron',sans-serif; font-size:10px; }
 
-  /* diales */
-  .dial{display:flex;flex-direction:column;align-items:center;gap:7px}
-  .dlbl{font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:2px}
-  .dwrap{position:relative;width:130px;height:130px}.dwrap svg{width:100%;height:100%}
-  .dval{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
-  .dval .big{font-family:'Orbitron',sans-serif;font-size:20px;font-weight:900;display:block;line-height:1}
-  .dval .unit{font-size:7px;color:var(--dim)}
-  .dbtn{display:flex;gap:8px;align-items:center}
-  .dbtn button{width:32px;height:32px;border-radius:50%;border:1px solid var(--border);
-    background:var(--panel);font-size:18px;cursor:pointer;transition:all .15s;
-    display:flex;align-items:center;justify-content:center;color:inherit}
-  .dbtn button:active{transform:scale(.9)}
-  .dbtn button.m{border-color:var(--o);color:var(--o)}.dbtn button.p{border-color:var(--g);color:var(--g)}
-  .dpos{font-family:'Orbitron',sans-serif;font-size:20px;font-weight:900;min-width:26px;text-align:center}
-  .ticks{display:flex;justify-content:space-between;width:130px;font-size:8px;color:var(--dim)}
-  .ticks .a{color:var(--g);font-weight:bold}
-  .rng{font-size:9px;color:var(--dim);text-align:center}.rng span{color:var(--text)}
+  /* ── Causa ── */
+  .causa {
+    font-size:10px; padding:8px 12px; border-radius:6px;
+    background:#050810; border:1px solid var(--border);
+    margin-bottom:12px; min-height:28px; line-height:1.6;
+  }
 
-  /* apply */
-  .abtn{width:100%;padding:12px;background:linear-gradient(135deg,rgba(0,212,255,.15),rgba(0,255,136,.1));
-    border:1px solid var(--accent);border-radius:8px;color:var(--accent);
-    font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:3px;cursor:pointer;transition:all .2s;margin-top:6px}
-  .abtn:active{transform:scale(.98)}
-  .abtn:disabled{opacity:.4;cursor:not-allowed}
-  .fb{text-align:center;font-size:10px;min-height:16px;margin-top:7px;color:var(--g);transition:opacity .5s}
+  /* ── Temperaturas ── */
+  .temp-readout { display:flex; justify-content:space-around; margin-bottom:12px; }
+  .temp-box { text-align:center; }
+  .temp-box .zone { font-size:9px; color:var(--dim); letter-spacing:2px; margin-bottom:4px; }
+  .temp-box .val { font-family:'Orbitron',sans-serif; font-size:32px; font-weight:900; line-height:1; }
+  .temp-box .val.h { color:var(--accent2); }
+  .temp-box .val.f { color:var(--accent); }
+  .temp-box .deg { font-size:12px; color:var(--dim); }
+  .temp-box .est { font-size:9px; margin-top:3px; min-height:14px; }
+  .upd { font-size:9px; color:var(--dim); text-align:center; }
+  .upd span { color:var(--warn); }
 
-  /* tabla */
-  table{width:100%;border-collapse:collapse;font-size:11px}
-  th{background:rgba(0,212,255,.08);color:var(--accent);padding:5px 6px;text-align:center;font-size:9px;border-bottom:1px solid var(--border)}
-  td{padding:5px 6px;border-bottom:1px solid rgba(30,58,95,.3);text-align:center}
-  tr:last-child td{border-bottom:none}
-  .rec{color:var(--g)}
-  .note{font-size:10px;color:var(--dim);line-height:1.6;margin-top:8px}
-  .note b{color:var(--text)}
+  /* ── Diales ── */
+  .dial-wrap { display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .dial-label { font-family:'Orbitron',sans-serif; font-size:11px; letter-spacing:2px; }
+  .dial-label.h { color:var(--accent2); }
+  .dial-label.f { color:var(--accent); }
+  .dial-svg-wrap { position:relative; width:160px; height:160px; }
+  .dial-svg-wrap svg { width:100%; height:100%; }
+  .dial-value { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; pointer-events:none; }
+  .dial-value .big { font-family:'Orbitron',sans-serif; font-size:26px; font-weight:900; display:block; line-height:1; }
+  .dial-value .unit { font-size:10px; color:var(--dim); }
+  .dial-buttons { display:flex; gap:8px; align-items:center; }
+  .dial-buttons button {
+    width:36px; height:36px; border-radius:50%;
+    border:1px solid var(--border); background:var(--panel);
+    color:var(--text); font-size:20px; cursor:pointer;
+    transition:all .15s; display:flex; align-items:center; justify-content:center;
+  }
+  .dial-buttons button:active { transform:scale(0.92); }
+  .dial-buttons button.minus { border-color:var(--accent3); color:var(--accent3); }
+  .dial-buttons button.plus  { border-color:var(--accent2); color:var(--accent2); }
+  .dial-buttons .pos-label { font-family:'Orbitron',sans-serif; font-size:18px; font-weight:900; min-width:30px; text-align:center; }
+  .tick-row { display:flex; justify-content:space-between; width:160px; font-size:9px; color:var(--dim); padding:0 4px; }
+  .tick-row span.active { color:var(--accent2); font-weight:bold; }
+  .range-display { font-size:11px; color:var(--dim); text-align:center; margin-top:2px; }
+  .range-display span { color:var(--text); }
+
+  /* ── Zona estado ── */
+  .zona-st { display:flex; align-items:center; gap:6px; font-size:9px; margin-top:4px; padding:5px 8px; border-radius:5px; background:rgba(0,0,0,.3); }
+  .zd { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+
+  /* ── Apply button ── */
+  .apply-btn {
+    width:100%; padding:14px;
+    background:linear-gradient(135deg, rgba(0,212,255,0.15), rgba(0,255,136,0.1));
+    border:1px solid var(--accent); border-radius:8px; color:var(--accent);
+    font-family:'Orbitron',sans-serif; font-size:12px; letter-spacing:3px;
+    cursor:pointer; transition:all .2s; margin-top:8px;
+  }
+  .apply-btn:active { transform:scale(0.98); background:rgba(0,212,255,0.25); }
+  .apply-btn:disabled { opacity:0.4; cursor:not-allowed; }
+  .feedback { text-align:center; font-size:11px; min-height:18px; margin-top:8px; color:var(--accent2); transition:opacity .5s; }
+
+  /* ── Tabla ── */
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  th { background:rgba(0,212,255,0.08); color:var(--accent); padding:6px 10px; text-align:center; font-size:10px; border-bottom:1px solid var(--border); }
+  td { padding:6px 10px; border-bottom:1px solid rgba(30,58,95,0.3); text-align:center; }
+  tr:last-child td { border-bottom:none; }
+  .rec td { color:var(--accent2); }
+  .note { font-size:10px; color:var(--dim); line-height:1.6; margin-top:10px; }
+  .note b { color:var(--text); }
 </style>
 </head>
 <body>
 
 <h1>HELADERA PATRICK</h1>
-<p class="sub">MQTT · HIVEMQ CLOUD · ACCESO REMOTO</p>
+<p class="subtitle">ESP32 · MQTT · ACCESO REMOTO · STARLINK</p>
 
 <!-- Conexión -->
 <div class="conn-bar">
   <div class="conn-dot wait" id="connDot"></div>
-  <span id="connLbl">Conectando a HiveMQ...</span>
+  <span id="connLbl">Conectando a broker MQTT...</span>
 </div>
 
-<!-- Estado -->
+<!-- Alerta sensor -->
+<div class="alerta-box" id="alertaBox"></div>
+
+<!-- ══ ESTADO ══ -->
 <div class="card">
-  <div class="stitle">Estado en tiempo real</div>
-  <div class="srow">
+  <div class="section-title">Estado en tiempo real</div>
+
+  <div class="status-row">
     <div>
-      <div class="slbl"><span>COMPRESOR</span></div>
-      <div class="slbl" id="compLbl">--</div>
+      <div class="status-label"><span>COMPRESOR (motor único)</span></div>
+      <div class="status-label" id="compLabel">--</div>
     </div>
-    <div class="dot" id="dot"></div>
+    <div class="status-dot" id="compDot"></div>
   </div>
-  <div class="trow">
-    <div class="tbox">
+
+  <div class="causa" id="causa">Esperando datos del ESP32...</div>
+
+  <div class="temp-readout">
+    <div class="temp-box">
       <div class="zone">HELADERA</div>
-      <div class="val" id="dH" style="color:var(--g)">--</div>
+      <div class="val h" id="dispH">--</div>
       <div class="deg">°C</div>
+      <div class="est" id="stH"></div>
     </div>
     <div style="width:1px;background:var(--border)"></div>
-    <div class="tbox">
+    <div class="temp-box">
       <div class="zone">FREEZER</div>
-      <div class="val" id="dF" style="color:var(--accent)">--</div>
+      <div class="val f" id="dispF">--</div>
       <div class="deg">°C</div>
+      <div class="est" id="stF"></div>
     </div>
   </div>
-  <div class="pausa">Última actualización: <span id="lastUpd">--</span></div>
+
+  <div class="upd">Última actualización: <span id="lastUpd">--</span></div>
 </div>
 
-<!-- Regulador -->
+<!-- ══ REGULADOR ══ -->
 <div class="card">
-  <div class="stitle">Regulador de temperatura</div>
-  <div class="g2">
-    <div class="dial">
-      <div class="dlbl" style="color:var(--g)">HELADERA</div>
-      <div class="dwrap">
-        <svg viewBox="0 0 130 130">
-          <circle cx="65" cy="65" r="50" fill="none" stroke="#1e3a5f" stroke-width="8" stroke-dasharray="264 100" stroke-dashoffset="-30" stroke-linecap="round"/>
-          <circle cx="65" cy="65" r="50" fill="none" stroke="#00ff88" stroke-width="8" stroke-dasharray="0 364" stroke-dashoffset="-30" stroke-linecap="round" id="aH" style="transition:stroke-dasharray .4s"/>
+  <div class="section-title">Regulador de temperatura</div>
+  <p class="note" style="margin-bottom:14px">
+    <b>Un solo motor.</b> Arranca cuando heladera o freezer lo piden,
+    se apaga cuando los dos están bien. Cada dial define cuánto frío exige esa zona.
+  </p>
+  <div class="grid2">
+
+    <!-- HELADERA -->
+    <div class="dial-wrap">
+      <div class="dial-label h">HELADERA</div>
+      <div class="dial-svg-wrap">
+        <svg viewBox="0 0 160 160">
+          <circle cx="80" cy="80" r="62" fill="none" stroke="#1e3a5f" stroke-width="10" stroke-dasharray="326 100" stroke-dashoffset="-37" stroke-linecap="round"/>
+          <circle cx="80" cy="80" r="62" fill="none" stroke="#00ff88" stroke-width="10" stroke-dasharray="0 426" stroke-dashoffset="-37" stroke-linecap="round" id="arcH" style="transition:stroke-dasharray .4s"/>
         </svg>
-        <div class="dval"><span class="big" id="tH" style="color:var(--g)">5°</span><span class="unit">heladera</span></div>
+        <div class="dial-value">
+          <span class="big" id="tempH" style="color:#00ff88">5°</span>
+          <span class="unit">meta heladera</span>
+        </div>
       </div>
-      <div class="dbtn">
-        <button class="m" onclick="chg('H',-1)">−</button>
-        <span class="dpos" id="pH" style="color:var(--g)">4</span>
-        <button class="p" onclick="chg('H',1)">+</button>
+      <div class="dial-buttons">
+        <button class="minus" onclick="changePos('H',-1)">−</button>
+        <span class="pos-label" id="posH" style="color:#00ff88">4</span>
+        <button class="plus"  onclick="changePos('H', 1)">+</button>
       </div>
-      <div class="ticks" id="tkH"></div>
-      <div class="rng">apaga: <span id="mnH">3°C</span> · enciende: <span id="mxH">5°C</span></div>
+      <div class="tick-row" id="tickLabelH"></div>
+      <div class="range-display">apaga: <span id="minH">3°C</span> · enciende: <span id="maxH">5°C</span></div>
+      <div class="zona-st"><div class="zd" id="zdH" style="background:var(--dim)"></div><span id="ztH">Esperando...</span></div>
     </div>
-    <div class="dial">
-      <div class="dlbl" style="color:var(--accent)">FREEZER</div>
-      <div class="dwrap">
-        <svg viewBox="0 0 130 130">
-          <circle cx="65" cy="65" r="50" fill="none" stroke="#1e3a5f" stroke-width="8" stroke-dasharray="264 100" stroke-dashoffset="-30" stroke-linecap="round"/>
-          <circle cx="65" cy="65" r="50" fill="none" stroke="#00d4ff" stroke-width="8" stroke-dasharray="0 364" stroke-dashoffset="-30" stroke-linecap="round" id="aF" style="transition:stroke-dasharray .4s"/>
+
+    <!-- FREEZER -->
+    <div class="dial-wrap">
+      <div class="dial-label f">FREEZER</div>
+      <div class="dial-svg-wrap">
+        <svg viewBox="0 0 160 160">
+          <circle cx="80" cy="80" r="62" fill="none" stroke="#1e3a5f" stroke-width="10" stroke-dasharray="326 100" stroke-dashoffset="-37" stroke-linecap="round"/>
+          <circle cx="80" cy="80" r="62" fill="none" stroke="#00d4ff" stroke-width="10" stroke-dasharray="0 426" stroke-dashoffset="-37" stroke-linecap="round" id="arcF" style="transition:stroke-dasharray .4s"/>
         </svg>
-        <div class="dval"><span class="big" id="tF" style="color:var(--accent)">-15°</span><span class="unit">freezer</span></div>
+        <div class="dial-value">
+          <span class="big" id="tempF" style="color:#00d4ff">-15°</span>
+          <span class="unit">meta freezer</span>
+        </div>
       </div>
-      <div class="dbtn">
-        <button class="m" onclick="chg('F',-1)">−</button>
-        <span class="dpos" id="pF" style="color:var(--accent)">4</span>
-        <button class="p" onclick="chg('F',1)">+</button>
+      <div class="dial-buttons">
+        <button class="minus" onclick="changePos('F',-1)">−</button>
+        <span class="pos-label" id="posF" style="color:#00d4ff">4</span>
+        <button class="plus"  onclick="changePos('F', 1)">+</button>
       </div>
-      <div class="ticks" id="tkF"></div>
-      <div class="rng">apaga: <span id="mnF">-18°C</span> · enciende: <span id="mxF">-15°C</span></div>
+      <div class="tick-row" id="tickLabelF"></div>
+      <div class="range-display">apaga: <span id="minF">-18°C</span> · enciende: <span id="maxF">-15°C</span></div>
+      <div class="zona-st"><div class="zd" id="zdF" style="background:var(--dim)"></div><span id="ztF">Esperando...</span></div>
     </div>
+
   </div>
-  <button class="abtn" id="aBtn" onclick="aplicar()">▶ APLICAR CONFIGURACIÓN</button>
-  <div class="fb" id="fb"></div>
+
+  <button class="apply-btn" id="applyBtn" onclick="aplicar()">▶ APLICAR CONFIGURACIÓN</button>
+  <div class="feedback" id="feedback"></div>
 </div>
 
-<!-- Tabla -->
+<!-- ══ TABLA ══ -->
 <div class="card">
-  <div class="stitle">Tabla equivalencias</div>
+  <div class="section-title">Tabla de equivalencias</div>
   <table>
-    <tr><th>POS</th><th>HELADERA</th><th>FREEZER</th><th>DESC</th></tr>
-    <tr><td>1</td><td>9→11°C</td><td>-8→-6°C</td><td style="color:var(--dim)">Mínimo</td></tr>
+    <tr><th>POS</th><th>HELADERA</th><th>FREEZER</th><th>DESCRIPCIÓN</th></tr>
+    <tr><td>1</td><td>9→11°C</td><td>-8→-6°C</td><td style="color:var(--dim)">Mínimo frío</td></tr>
     <tr><td>2</td><td>7→9°C</td><td>-11→-9°C</td><td style="color:var(--dim)">Poco frío</td></tr>
     <tr><td>3</td><td>5→7°C</td><td>-13→-11°C</td><td style="color:var(--dim)">Normal</td></tr>
-    <tr class="rec"><td>4★</td><td>3→5°C</td><td>-18→-15°C</td><td>Ideal ★</td></tr>
-    <tr><td>5</td><td>1→3°C</td><td>-20→-18°C</td><td style="color:var(--dim)">Intenso</td></tr>
+    <tr class="rec"><td>4 ★</td><td>3→5°C</td><td>-18→-15°C</td><td>Ideal recomendado ★</td></tr>
+    <tr><td>5</td><td>1→3°C</td><td>-20→-18°C</td><td style="color:var(--dim)">Frío intenso</td></tr>
     <tr><td>6</td><td>0→1°C</td><td>-22→-20°C</td><td style="color:var(--dim)">Muy frío</td></tr>
-    <tr><td>7</td><td>-1→0°C</td><td>-24→-22°C</td><td style="color:var(--o)">Máximo</td></tr>
+    <tr><td>7</td><td>-1→0°C</td><td>-24→-22°C</td><td style="color:var(--accent3)">Máximo</td></tr>
   </table>
-  <p class="note">Los datos se actualizan cada <b>10 segundos</b> automáticamente. Si ves "--" es porque el ESP32 todavía no publicó datos o está sin conexión.</p>
+  <p class="note">Actualizaciones cada <b>10 segundos</b>. Si ves <b style="color:var(--r)">ERR</b> en una zona, ese sensor falló pero la heladera sigue funcionando con el otro.</p>
 </div>
 
 <script>
-// ── Configuración HiveMQ ─────────────────────────────────────────
-const MQTT_HOST = "broker.hivemq.com";
-const MQTT_PORT = 8884;
-const MQTT_USER = "";
-const MQTT_PASS = "";
+// ── Config MQTT ───────────────────────────────────────────────────
+const MQTT_HOST    = "broker.hivemq.com";
+const MQTT_PORT    = 8884;
 const TOPIC_PREFIX = "heladera_patrick_7x4k2m";
 
-// ── Tablas posición → temperatura ────────────────────────────────
-const tabH = {1:{x:11,n:9},2:{x:9,n:7},3:{x:7,n:5},4:{x:5,n:3},5:{x:3,n:1},6:{x:1,n:0},7:{x:0,n:-1}};
-const tabF = {1:{x:-6,n:-8},2:{x:-9,n:-11},3:{x:-11,n:-13},4:{x:-15,n:-18},5:{x:-18,n:-20},6:{x:-20,n:-22},7:{x:-22,n:-24}};
-let posH = 4, posF = 4;
+// ── Tablas posición → temperatura ─────────────────────────────────
+const tablaH = {1:{max:11,min:9},2:{max:9,min:7},3:{max:7,min:5},4:{max:5,min:3},5:{max:3,min:1},6:{max:1,min:0},7:{max:0,min:-1}};
+const tablaF = {1:{max:-6,min:-8},2:{max:-9,min:-11},3:{max:-11,min:-13},4:{max:-15,min:-18},5:{max:-18,min:-20},6:{max:-20,min:-22},7:{max:-22,min:-24}};
+const ARC_TOTAL = 326;
 
-// ── Diales ───────────────────────────────────────────────────────
-function updDial(id, pos, tab) {
-  const f = (pos-1)/6, tot = 264;
-  document.getElementById('a'+id).setAttribute('stroke-dasharray', tot*f+' '+(tot*(1-f)+100));
-  const t = tab[pos];
-  document.getElementById('t'+id).textContent = t.x + '°';
-  document.getElementById('p'+id).textContent = pos;
-  document.getElementById('mn'+id).textContent = t.n + '°C';
-  document.getElementById('mx'+id).textContent = t.x + '°C';
-  const tk = document.getElementById('tk'+id);
-  tk.innerHTML = '';
-  for (let i=1; i<=7; i++) {
-    const s = document.createElement('span');
-    s.textContent = i;
-    if (i === pos) s.className = 'a';
-    tk.appendChild(s);
+let posH = 4, posF = 4;
+let tempH = null, tempF = null, compON = false;
+
+// ── Diales ────────────────────────────────────────────────────────
+function updateDial(id, pos, tabla) {
+  const frac   = (pos - 1) / 6;
+  const filled = ARC_TOTAL * frac;
+  document.getElementById('arc' + id).setAttribute('stroke-dasharray', filled + ' ' + (ARC_TOTAL + 100 - filled));
+  const t = tabla[pos];
+  document.getElementById('temp' + id).textContent = t.max + '°';
+  document.getElementById('pos'  + id).textContent = pos;
+  document.getElementById('min'  + id).textContent = t.min + '°C';
+  document.getElementById('max'  + id).textContent = t.max + '°C';
+  // ticks
+  const wrap = document.getElementById('tickLabel' + id);
+  wrap.innerHTML = '';
+  for (let i = 1; i <= 7; i++) {
+    const sp = document.createElement('span');
+    sp.textContent = i;
+    if (i === pos) sp.classList.add('active');
+    wrap.appendChild(sp);
   }
+  actualizarEstado();
 }
-function chg(id, d) {
-  if (id==='H') { posH = Math.max(1, Math.min(7, posH+d)); updDial('H', posH, tabH); }
-  else           { posF = Math.max(1, Math.min(7, posF+d)); updDial('F', posF, tabF); }
+
+function changePos(id, delta) {
+  if (id === 'H') { posH = Math.max(1, Math.min(7, posH + delta)); updateDial('H', posH, tablaH); }
+  else             { posF = Math.max(1, Math.min(7, posF + delta)); updateDial('F', posF, tablaF); }
+}
+
+// ── Estado por zona ───────────────────────────────────────────────
+function actualizarEstado() {
+  const tH = tablaH[posH], tF = tablaF[posF];
+
+  // Heladera
+  if (tempH === null) {
+    document.getElementById('zdH').style.background = 'var(--r)';
+    document.getElementById('ztH').textContent = '✖ Sensor sin respuesta';
+    document.getElementById('stH').innerHTML = '<span style="color:var(--r)">✖ FALLO</span>';
+  } else {
+    const hN = tempH > tH.max, hB = tempH < tH.min;
+    const hC = hN ? 'var(--r)' : hB ? 'var(--accent2)' : 'var(--warn)';
+    document.getElementById('zdH').style.background = hC;
+    document.getElementById('ztH').textContent = hN ? `⚠ ${tempH}°C — pide compresor` : hB ? `✔ ${tempH}°C — temperatura ideal` : `⟳ ${tempH}°C — enfriando`;
+    document.getElementById('stH').innerHTML = `<span style="color:${hC}">${hN ? '▲ SOBRE LÍMITE' : hB ? '✔ IDEAL' : '→ ENFRIANDO'}</span>`;
+  }
+
+  // Freezer
+  if (tempF === null) {
+    document.getElementById('zdF').style.background = 'var(--r)';
+    document.getElementById('ztF').textContent = '✖ Sensor sin respuesta';
+    document.getElementById('stF').innerHTML = '<span style="color:var(--r)">✖ FALLO</span>';
+  } else {
+    const fN = tempF > tF.max, fB = tempF < tF.min;
+    const fC = fN ? 'var(--r)' : fB ? 'var(--accent2)' : 'var(--warn)';
+    document.getElementById('zdF').style.background = fC;
+    document.getElementById('ztF').textContent = fN ? `⚠ ${tempF}°C — pide compresor` : fB ? `✔ ${tempF}°C — temperatura ideal` : `⟳ ${tempF}°C — enfriando`;
+    document.getElementById('stF').innerHTML = `<span style="color:${fC}">${fN ? '▲ SOBRE LÍMITE' : fB ? '✔ IDEAL' : '→ ENFRIANDO'}</span>`;
+  }
+
+  // Causa del compresor
+  let c = '';
+  const hN = tempH !== null && tempH > tH.max;
+  const fN = tempF !== null && tempF > tF.max;
+  const hB = tempH !== null && tempH < tH.min;
+  const fB = tempF !== null && tempF < tF.min;
+  if (compON) {
+    if (tempH === null && tempF === null) c = '🔴 ON — <b style="color:var(--r)">MODO EMERGENCIA</b> — ciclos fijos sin sensores';
+    else if (hN && fN) c = '🔴 ON — <b>heladera Y freezer</b> sobre límite';
+    else if (hN)       c = '🔴 ON — lo pide la <b style="color:var(--accent2)">heladera</b>';
+    else if (fN)       c = '🔴 ON — lo pide el <b style="color:var(--accent)">freezer</b>';
+    else               c = '🔴 ON — completando ciclo mínimo de 3 min';
+  } else {
+    if (tempH === null && tempF === null) c = '🔵 OFF — <b style="color:var(--r)">MODO EMERGENCIA</b> — pausa del ciclo fijo';
+    else if (hB && fB) c = '🔵 OFF — <b>heladera Y freezer</b> en temperatura ideal ✔';
+    else               c = '🔵 OFF — temperatura dentro del rango';
+  }
+  document.getElementById('causa').innerHTML = c;
 }
 
 // ── MQTT ─────────────────────────────────────────────────────────
 let client;
-
 function conectar() {
-  const url = `wss://${MQTT_HOST}:${MQTT_PORT}/mqtt`;
-  client = mqtt.connect(url, {
-    clientId:           'dashboard_' + Math.random().toString(16).substr(2,8),
+  client = mqtt.connect(`wss://${MQTT_HOST}:${MQTT_PORT}/mqtt`, {
+    clientId:           'dash_' + Math.random().toString(16).substr(2, 8),
     clean:              true,
     reconnectPeriod:    6000,
     connectTimeout:     15000,
@@ -232,73 +391,93 @@ function conectar() {
 
   client.on('connect', () => {
     setConn('ok', 'Conectado ✔');
-    client.subscribe(TOPIC_PREFIX + '/tempH');
-    client.subscribe(TOPIC_PREFIX + '/tempF');
-    client.subscribe(TOPIC_PREFIX + '/compresor');
-    client.subscribe(TOPIC_PREFIX + '/config');
+    ['tempH','tempF','compresor','config','alerta'].forEach(t => client.subscribe(TOPIC_PREFIX + '/' + t));
   });
-
-  client.on('error', (e) => {
-    setConn('err', 'Error de conexión — reintentando...');
-    console.error(e);
-  });
-
+  client.on('error',     () => setConn('err',  'Error de conexión — reintentando...'));
   client.on('reconnect', () => setConn('wait', 'Reconectando...'));
 
   client.on('message', (topic, payload) => {
     const msg = payload.toString();
     const now = new Date().toLocaleTimeString('es-AR');
 
-    if (topic === TOPIC_PREFIX+'/tempH') {
-      document.getElementById('dH').textContent = msg;
+    if (topic === TOPIC_PREFIX + '/tempH') {
+      if (msg === 'ERR') {
+        tempH = null;
+        document.getElementById('dispH').innerHTML = '<span style="color:var(--r);font-size:20px">ERR</span>';
+      } else {
+        tempH = parseFloat(msg);
+        document.getElementById('dispH').textContent = msg;
+      }
       document.getElementById('lastUpd').textContent = now;
+      actualizarEstado();
     }
-    if (topic === TOPIC_PREFIX+'/tempF') {
-      document.getElementById('dF').textContent = msg;
+
+    if (topic === TOPIC_PREFIX + '/tempF') {
+      if (msg === 'ERR') {
+        tempF = null;
+        document.getElementById('dispF').innerHTML = '<span style="color:var(--r);font-size:20px">ERR</span>';
+      } else {
+        tempF = parseFloat(msg);
+        document.getElementById('dispF').textContent = msg;
+      }
+      actualizarEstado();
     }
-    if (topic === TOPIC_PREFIX+'/compresor') {
-      const on = msg === 'ON';
-      document.getElementById('dot').className = 'dot' + (on ? ' on' : '');
-      document.getElementById('compLbl').textContent = on ? '🔴 ENCENDIDO' : '🔵 APAGADO';
+
+    if (topic === TOPIC_PREFIX + '/compresor') {
+      compON = msg === 'ON';
+      document.getElementById('compDot').className  = 'status-dot' + (compON ? ' on' : '');
+      document.getElementById('compLabel').textContent = compON ? '🔴 ENCENDIDO' : '🔵 APAGADO';
+      actualizarEstado();
     }
-    if (topic === TOPIC_PREFIX+'/config') {
-      // Sincronizar diales con config guardada en el ESP32
-      const getPart = (key) => { const m = msg.match(new RegExp(key+':([-\\d]+)')); return m ? parseInt(m[1]) : null; };
-      const pH = getPart('posH'), pF = getPart('posF');
-      if (pH && pH !== posH) { posH = pH; updDial('H', posH, tabH); }
-      if (pF && pF !== posF) { posF = pF; updDial('F', posF, tabF); }
+
+    if (topic === TOPIC_PREFIX + '/config') {
+      const get = (k) => { const m = msg.match(new RegExp(k + ':([-\\d]+)')); return m ? parseInt(m[1]) : null; };
+      const pH = get('posH'), pF = get('posF');
+      if (pH && pH !== posH) { posH = pH; updateDial('H', posH, tablaH); }
+      if (pF && pF !== posF) { posF = pF; updateDial('F', posF, tablaF); }
+    }
+
+    if (topic === TOPIC_PREFIX + '/alerta') {
+      const box = document.getElementById('alertaBox');
+      if (msg && msg.trim() !== '') {
+        const esCritico = msg.startsWith('CRITICO');
+        box.className   = esCritico ? 'alerta-box' : 'alerta-box warn';
+        box.style.display = 'block';
+        box.innerHTML   = (esCritico ? '🚨 ' : '⚠️ ') + msg;
+      } else {
+        box.style.display = 'none';
+        box.innerHTML = '';
+      }
     }
   });
 }
 
 function setConn(state, txt) {
-  document.getElementById('connDot').className = 'conn-dot ' + state;
+  document.getElementById('connDot').className  = 'conn-dot ' + state;
   document.getElementById('connLbl').textContent = txt;
 }
 
-// ── Aplicar configuración ────────────────────────────────────────
-function aplicar() {
+// ── Aplicar configuración ─────────────────────────────────────────
+async function aplicar() {
   if (!client || !client.connected) {
-    document.getElementById('fb').textContent = '✖ Sin conexión al broker';
+    document.getElementById('feedback').textContent = '✖ Sin conexión al broker';
     return;
   }
-  const btn = document.getElementById('aBtn');
-  const fb  = document.getElementById('fb');
+  const btn = document.getElementById('applyBtn');
+  const fb  = document.getElementById('feedback');
   btn.disabled = true;
   fb.style.opacity = '1';
-
-  const msg = `posH:${posH},posF:${posF}`;
-  client.publish(TOPIC_PREFIX+'/set', msg);
-
-  const tH = tabH[posH], tF = tabF[posF];
-  fb.textContent = `✔ Enviado — H:${tH.n}° a ${tH.x}° · F:${tF.n}° a ${tF.x}°`;
+  client.publish(TOPIC_PREFIX + '/set', `posH:${posH},posF:${posF}`);
+  const tH = tablaH[posH], tF = tablaF[posF];
+  fb.textContent = `✔ Aplicado — H: ${tH.min}°→${tH.max}° · F: ${tF.min}°→${tF.max}°`;
   btn.disabled = false;
-  setTimeout(() => { fb.style.opacity='0'; }, 4000);
+  setTimeout(() => { fb.style.opacity = '0'; }, 4000);
+  setTimeout(() => { fb.textContent = ''; fb.style.opacity = '1'; }, 4700);
 }
 
-// ── Init ─────────────────────────────────────────────────────────
-updDial('H', posH, tabH);
-updDial('F', posF, tabF);
+// ── Init ──────────────────────────────────────────────────────────
+updateDial('H', posH, tablaH);
+updateDial('F', posF, tablaF);
 conectar();
 </script>
 </body>
