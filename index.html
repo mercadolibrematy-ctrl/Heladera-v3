@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Heladera Patrick</title>
+<!-- Librería MQTT para el navegador via WebSocket -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+  :root{--bg:#0a0e1a;--panel:#111827;--border:#1e3a5f;--accent:#00d4ff;--g:#00ff88;--o:#ff6b35;--y:#ffd700;--r:#ff4444;--b:#4488ff;--dim:#4a6080;--text:#c8d8e8}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monospace;padding:16px;
+    background-image:radial-gradient(ellipse at 20% 20%,rgba(0,212,255,.04) 0%,transparent 60%),
+    linear-gradient(rgba(0,212,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,.02) 1px,transparent 1px);
+    background-size:100%,40px 40px,40px 40px}
+  h1{font-family:'Orbitron',sans-serif;font-size:clamp(12px,4vw,20px);color:var(--accent);
+    text-align:center;letter-spacing:3px;margin-bottom:3px;text-shadow:0 0 20px rgba(0,212,255,.4)}
+  .sub{text-align:center;color:var(--dim);font-size:9px;letter-spacing:2px;margin-bottom:16px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px}
+  .stitle{font-family:'Orbitron',sans-serif;font-size:9px;color:var(--accent);letter-spacing:3px;
+    text-transform:uppercase;margin-bottom:10px;padding-bottom:5px;border-bottom:1px solid var(--border)}
+  .g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+  @media(max-width:400px){.g2{grid-template-columns:1fr}}
+
+  /* conexión */
+  .conn-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:7px;
+    background:#050810;border:1px solid var(--border);margin-bottom:12px;font-size:10px}
+  .conn-dot{width:10px;height:10px;border-radius:50%;background:#555;flex-shrink:0;transition:all .4s}
+  .conn-dot.ok{background:var(--g);box-shadow:0 0 8px var(--g)}
+  .conn-dot.err{background:var(--r);box-shadow:0 0 8px var(--r)}
+  .conn-dot.wait{background:var(--y);box-shadow:0 0 8px var(--y);animation:blink 1s infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+  /* temps */
+  .trow{display:flex;justify-content:space-around;margin-bottom:12px}
+  .tbox{text-align:center}
+  .tbox .zone{font-size:8px;color:var(--dim);letter-spacing:2px;margin-bottom:3px}
+  .tbox .val{font-family:'Orbitron',sans-serif;font-size:34px;font-weight:900;line-height:1}
+  .tbox .deg{font-size:11px;color:var(--dim)}
+
+  /* compresor */
+  .srow{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;
+    background:#050810;border:1px solid var(--border);border-radius:7px;margin-bottom:10px}
+  .dot{width:14px;height:14px;border-radius:50%;background:var(--b);box-shadow:0 0 8px var(--b);transition:all .4s}
+  .dot.on{background:var(--r);box-shadow:0 0 12px var(--r)}
+  .slbl{font-size:11px}.slbl span{color:var(--accent);font-family:'Orbitron',sans-serif;font-size:9px}
+  .pausa{font-size:9px;color:var(--dim);text-align:center}
+  .pausa span{color:var(--y)}
+
+  /* diales */
+  .dial{display:flex;flex-direction:column;align-items:center;gap:7px}
+  .dlbl{font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:2px}
+  .dwrap{position:relative;width:130px;height:130px}.dwrap svg{width:100%;height:100%}
+  .dval{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
+  .dval .big{font-family:'Orbitron',sans-serif;font-size:20px;font-weight:900;display:block;line-height:1}
+  .dval .unit{font-size:7px;color:var(--dim)}
+  .dbtn{display:flex;gap:8px;align-items:center}
+  .dbtn button{width:32px;height:32px;border-radius:50%;border:1px solid var(--border);
+    background:var(--panel);font-size:18px;cursor:pointer;transition:all .15s;
+    display:flex;align-items:center;justify-content:center;color:inherit}
+  .dbtn button:active{transform:scale(.9)}
+  .dbtn button.m{border-color:var(--o);color:var(--o)}.dbtn button.p{border-color:var(--g);color:var(--g)}
+  .dpos{font-family:'Orbitron',sans-serif;font-size:20px;font-weight:900;min-width:26px;text-align:center}
+  .ticks{display:flex;justify-content:space-between;width:130px;font-size:8px;color:var(--dim)}
+  .ticks .a{color:var(--g);font-weight:bold}
+  .rng{font-size:9px;color:var(--dim);text-align:center}.rng span{color:var(--text)}
+
+  /* apply */
+  .abtn{width:100%;padding:12px;background:linear-gradient(135deg,rgba(0,212,255,.15),rgba(0,255,136,.1));
+    border:1px solid var(--accent);border-radius:8px;color:var(--accent);
+    font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:3px;cursor:pointer;transition:all .2s;margin-top:6px}
+  .abtn:active{transform:scale(.98)}
+  .abtn:disabled{opacity:.4;cursor:not-allowed}
+  .fb{text-align:center;font-size:10px;min-height:16px;margin-top:7px;color:var(--g);transition:opacity .5s}
+
+  /* tabla */
+  table{width:100%;border-collapse:collapse;font-size:11px}
+  th{background:rgba(0,212,255,.08);color:var(--accent);padding:5px 6px;text-align:center;font-size:9px;border-bottom:1px solid var(--border)}
+  td{padding:5px 6px;border-bottom:1px solid rgba(30,58,95,.3);text-align:center}
+  tr:last-child td{border-bottom:none}
+  .rec{color:var(--g)}
+  .note{font-size:10px;color:var(--dim);line-height:1.6;margin-top:8px}
+  .note b{color:var(--text)}
+</style>
+</head>
+<body>
+
+<h1>HELADERA PATRICK</h1>
+<p class="sub">MQTT · HIVEMQ CLOUD · ACCESO REMOTO</p>
+
+<!-- Conexión -->
+<div class="conn-bar">
+  <div class="conn-dot wait" id="connDot"></div>
+  <span id="connLbl">Conectando a HiveMQ...</span>
+</div>
+
+<!-- Estado -->
+<div class="card">
+  <div class="stitle">Estado en tiempo real</div>
+  <div class="srow">
+    <div>
+      <div class="slbl"><span>COMPRESOR</span></div>
+      <div class="slbl" id="compLbl">--</div>
+    </div>
+    <div class="dot" id="dot"></div>
+  </div>
+  <div class="trow">
+    <div class="tbox">
+      <div class="zone">HELADERA</div>
+      <div class="val" id="dH" style="color:var(--g)">--</div>
+      <div class="deg">°C</div>
+    </div>
+    <div style="width:1px;background:var(--border)"></div>
+    <div class="tbox">
+      <div class="zone">FREEZER</div>
+      <div class="val" id="dF" style="color:var(--accent)">--</div>
+      <div class="deg">°C</div>
+    </div>
+  </div>
+  <div class="pausa">Última actualización: <span id="lastUpd">--</span></div>
+</div>
+
+<!-- Regulador -->
+<div class="card">
+  <div class="stitle">Regulador de temperatura</div>
+  <div class="g2">
+    <div class="dial">
+      <div class="dlbl" style="color:var(--g)">HELADERA</div>
+      <div class="dwrap">
+        <svg viewBox="0 0 130 130">
+          <circle cx="65" cy="65" r="50" fill="none" stroke="#1e3a5f" stroke-width="8" stroke-dasharray="264 100" stroke-dashoffset="-30" stroke-linecap="round"/>
+          <circle cx="65" cy="65" r="50" fill="none" stroke="#00ff88" stroke-width="8" stroke-dasharray="0 364" stroke-dashoffset="-30" stroke-linecap="round" id="aH" style="transition:stroke-dasharray .4s"/>
+        </svg>
+        <div class="dval"><span class="big" id="tH" style="color:var(--g)">5°</span><span class="unit">heladera</span></div>
+      </div>
+      <div class="dbtn">
+        <button class="m" onclick="chg('H',-1)">−</button>
+        <span class="dpos" id="pH" style="color:var(--g)">4</span>
+        <button class="p" onclick="chg('H',1)">+</button>
+      </div>
+      <div class="ticks" id="tkH"></div>
+      <div class="rng">apaga: <span id="mnH">3°C</span> · enciende: <span id="mxH">5°C</span></div>
+    </div>
+    <div class="dial">
+      <div class="dlbl" style="color:var(--accent)">FREEZER</div>
+      <div class="dwrap">
+        <svg viewBox="0 0 130 130">
+          <circle cx="65" cy="65" r="50" fill="none" stroke="#1e3a5f" stroke-width="8" stroke-dasharray="264 100" stroke-dashoffset="-30" stroke-linecap="round"/>
+          <circle cx="65" cy="65" r="50" fill="none" stroke="#00d4ff" stroke-width="8" stroke-dasharray="0 364" stroke-dashoffset="-30" stroke-linecap="round" id="aF" style="transition:stroke-dasharray .4s"/>
+        </svg>
+        <div class="dval"><span class="big" id="tF" style="color:var(--accent)">-15°</span><span class="unit">freezer</span></div>
+      </div>
+      <div class="dbtn">
+        <button class="m" onclick="chg('F',-1)">−</button>
+        <span class="dpos" id="pF" style="color:var(--accent)">4</span>
+        <button class="p" onclick="chg('F',1)">+</button>
+      </div>
+      <div class="ticks" id="tkF"></div>
+      <div class="rng">apaga: <span id="mnF">-18°C</span> · enciende: <span id="mxF">-15°C</span></div>
+    </div>
+  </div>
+  <button class="abtn" id="aBtn" onclick="aplicar()">▶ APLICAR CONFIGURACIÓN</button>
+  <div class="fb" id="fb"></div>
+</div>
+
+<!-- Tabla -->
+<div class="card">
+  <div class="stitle">Tabla equivalencias</div>
+  <table>
+    <tr><th>POS</th><th>HELADERA</th><th>FREEZER</th><th>DESC</th></tr>
+    <tr><td>1</td><td>9→11°C</td><td>-8→-6°C</td><td style="color:var(--dim)">Mínimo</td></tr>
+    <tr><td>2</td><td>7→9°C</td><td>-11→-9°C</td><td style="color:var(--dim)">Poco frío</td></tr>
+    <tr><td>3</td><td>5→7°C</td><td>-13→-11°C</td><td style="color:var(--dim)">Normal</td></tr>
+    <tr class="rec"><td>4★</td><td>3→5°C</td><td>-18→-15°C</td><td>Ideal ★</td></tr>
+    <tr><td>5</td><td>1→3°C</td><td>-20→-18°C</td><td style="color:var(--dim)">Intenso</td></tr>
+    <tr><td>6</td><td>0→1°C</td><td>-22→-20°C</td><td style="color:var(--dim)">Muy frío</td></tr>
+    <tr><td>7</td><td>-1→0°C</td><td>-24→-22°C</td><td style="color:var(--o)">Máximo</td></tr>
+  </table>
+  <p class="note">Los datos se actualizan cada <b>10 segundos</b> automáticamente. Si ves "--" es porque el ESP32 todavía no publicó datos o está sin conexión.</p>
+</div>
+
+<script>
+// ── Configuración HiveMQ ─────────────────────────────────────────
+const MQTT_HOST = "72ba246be6c64561904bd4cf1e9a650d.s1.eu.hivemq.cloud";
+const MQTT_PORT = 8884;   // WebSocket TLS
+const MQTT_USER = "Heladera";
+const MQTT_PASS = "Heladera2024*";
+
+// ── Tablas posición → temperatura ────────────────────────────────
+const tabH = {1:{x:11,n:9},2:{x:9,n:7},3:{x:7,n:5},4:{x:5,n:3},5:{x:3,n:1},6:{x:1,n:0},7:{x:0,n:-1}};
+const tabF = {1:{x:-6,n:-8},2:{x:-9,n:-11},3:{x:-11,n:-13},4:{x:-15,n:-18},5:{x:-18,n:-20},6:{x:-20,n:-22},7:{x:-22,n:-24}};
+let posH = 4, posF = 4;
+
+// ── Diales ───────────────────────────────────────────────────────
+function updDial(id, pos, tab) {
+  const f = (pos-1)/6, tot = 264;
+  document.getElementById('a'+id).setAttribute('stroke-dasharray', tot*f+' '+(tot*(1-f)+100));
+  const t = tab[pos];
+  document.getElementById('t'+id).textContent = t.x + '°';
+  document.getElementById('p'+id).textContent = pos;
+  document.getElementById('mn'+id).textContent = t.n + '°C';
+  document.getElementById('mx'+id).textContent = t.x + '°C';
+  const tk = document.getElementById('tk'+id);
+  tk.innerHTML = '';
+  for (let i=1; i<=7; i++) {
+    const s = document.createElement('span');
+    s.textContent = i;
+    if (i === pos) s.className = 'a';
+    tk.appendChild(s);
+  }
+}
+function chg(id, d) {
+  if (id==='H') { posH = Math.max(1, Math.min(7, posH+d)); updDial('H', posH, tabH); }
+  else           { posF = Math.max(1, Math.min(7, posF+d)); updDial('F', posF, tabF); }
+}
+
+// ── MQTT ─────────────────────────────────────────────────────────
+let client;
+
+function conectar() {
+  const url = `wss://${MQTT_HOST}:${MQTT_PORT}/mqtt`;
+  client = mqtt.connect(url, {
+    username:  MQTT_USER,
+    password:  MQTT_PASS,
+    clientId:  'dashboard_' + Math.random().toString(16).substr(2,6),
+    clean:     true,
+    reconnectPeriod: 5000,
+  });
+
+  client.on('connect', () => {
+    setConn('ok', 'Conectado a HiveMQ ✔');
+    client.subscribe('heladera/tempH');
+    client.subscribe('heladera/tempF');
+    client.subscribe('heladera/compresor');
+    client.subscribe('heladera/config');
+  });
+
+  client.on('error', (e) => {
+    setConn('err', 'Error de conexión — reintentando...');
+    console.error(e);
+  });
+
+  client.on('reconnect', () => setConn('wait', 'Reconectando...'));
+
+  client.on('message', (topic, payload) => {
+    const msg = payload.toString();
+    const now = new Date().toLocaleTimeString('es-AR');
+
+    if (topic === 'heladera/tempH') {
+      document.getElementById('dH').textContent = msg;
+      document.getElementById('lastUpd').textContent = now;
+    }
+    if (topic === 'heladera/tempF') {
+      document.getElementById('dF').textContent = msg;
+    }
+    if (topic === 'heladera/compresor') {
+      const on = msg === 'ON';
+      document.getElementById('dot').className = 'dot' + (on ? ' on' : '');
+      document.getElementById('compLbl').textContent = on ? '🔴 ENCENDIDO' : '🔵 APAGADO';
+    }
+    if (topic === 'heladera/config') {
+      // Sincronizar diales con config guardada en el ESP32
+      const getPart = (key) => { const m = msg.match(new RegExp(key+':([-\\d]+)')); return m ? parseInt(m[1]) : null; };
+      const pH = getPart('posH'), pF = getPart('posF');
+      if (pH && pH !== posH) { posH = pH; updDial('H', posH, tabH); }
+      if (pF && pF !== posF) { posF = pF; updDial('F', posF, tabF); }
+    }
+  });
+}
+
+function setConn(state, txt) {
+  document.getElementById('connDot').className = 'conn-dot ' + state;
+  document.getElementById('connLbl').textContent = txt;
+}
+
+// ── Aplicar configuración ────────────────────────────────────────
+function aplicar() {
+  if (!client || !client.connected) {
+    document.getElementById('fb').textContent = '✖ Sin conexión con HiveMQ';
+    return;
+  }
+  const btn = document.getElementById('aBtn');
+  const fb  = document.getElementById('fb');
+  btn.disabled = true;
+  fb.style.opacity = '1';
+
+  const msg = `posH:${posH},posF:${posF}`;
+  client.publish('heladera/set', msg);
+
+  const tH = tabH[posH], tF = tabF[posF];
+  fb.textContent = `✔ Enviado — H:${tH.n}° a ${tH.x}° · F:${tF.n}° a ${tF.x}°`;
+  btn.disabled = false;
+  setTimeout(() => { fb.style.opacity='0'; }, 4000);
+}
+
+// ── Init ─────────────────────────────────────────────────────────
+updDial('H', posH, tabH);
+updDial('F', posF, tabF);
+conectar();
+</script>
+</body>
+</html>
