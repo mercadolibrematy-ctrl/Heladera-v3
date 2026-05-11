@@ -182,11 +182,11 @@
 
 <script>
 // ── Configuración HiveMQ ─────────────────────────────────────────
-const MQTT_HOST = "72ba246be6c64561904bd4cf1e9a650d.s1.eu.hivemq.cloud";
-const MQTT_PORT = 8884;   // WebSocket TLS
-const MQTT_USER = "Heladera";
-const MQTT_PASS = "Heladera2024*";
-const MQTT_PATH = "/mqtt";  // path requerido por HiveMQ Cloud
+const MQTT_HOST = "broker.hivemq.com";
+const MQTT_PORT = 8884;
+const MQTT_USER = "";
+const MQTT_PASS = "";
+const TOPIC_PREFIX = "heladera_patrick_7x4k2m";
 
 // ── Tablas posición → temperatura ────────────────────────────────
 const tabH = {1:{x:11,n:9},2:{x:9,n:7},3:{x:7,n:5},4:{x:5,n:3},5:{x:3,n:1},6:{x:1,n:0},7:{x:0,n:-1}};
@@ -222,8 +222,6 @@ let client;
 function conectar() {
   const url = `wss://${MQTT_HOST}:${MQTT_PORT}/mqtt`;
   client = mqtt.connect(url, {
-    username:           MQTT_USER,
-    password:           MQTT_PASS,
     clientId:           'dashboard_' + Math.random().toString(16).substr(2,8),
     clean:              true,
     reconnectPeriod:    6000,
@@ -233,11 +231,11 @@ function conectar() {
   });
 
   client.on('connect', () => {
-    setConn('ok', 'Conectado a HiveMQ ✔');
-    client.subscribe('heladera/tempH');
-    client.subscribe('heladera/tempF');
-    client.subscribe('heladera/compresor');
-    client.subscribe('heladera/config');
+    setConn('ok', 'Conectado ✔');
+    client.subscribe(TOPIC_PREFIX + '/tempH');
+    client.subscribe(TOPIC_PREFIX + '/tempF');
+    client.subscribe(TOPIC_PREFIX + '/compresor');
+    client.subscribe(TOPIC_PREFIX + '/config');
   });
 
   client.on('error', (e) => {
@@ -251,19 +249,19 @@ function conectar() {
     const msg = payload.toString();
     const now = new Date().toLocaleTimeString('es-AR');
 
-    if (topic === 'heladera/tempH') {
+    if (topic === TOPIC_PREFIX+'/tempH') {
       document.getElementById('dH').textContent = msg;
       document.getElementById('lastUpd').textContent = now;
     }
-    if (topic === 'heladera/tempF') {
+    if (topic === TOPIC_PREFIX+'/tempF') {
       document.getElementById('dF').textContent = msg;
     }
-    if (topic === 'heladera/compresor') {
+    if (topic === TOPIC_PREFIX+'/compresor') {
       const on = msg === 'ON';
       document.getElementById('dot').className = 'dot' + (on ? ' on' : '');
       document.getElementById('compLbl').textContent = on ? '🔴 ENCENDIDO' : '🔵 APAGADO';
     }
-    if (topic === 'heladera/config') {
+    if (topic === TOPIC_PREFIX+'/config') {
       // Sincronizar diales con config guardada en el ESP32
       const getPart = (key) => { const m = msg.match(new RegExp(key+':([-\\d]+)')); return m ? parseInt(m[1]) : null; };
       const pH = getPart('posH'), pF = getPart('posF');
@@ -281,7 +279,7 @@ function setConn(state, txt) {
 // ── Aplicar configuración ────────────────────────────────────────
 function aplicar() {
   if (!client || !client.connected) {
-    document.getElementById('fb').textContent = '✖ Sin conexión con HiveMQ';
+    document.getElementById('fb').textContent = '✖ Sin conexión al broker';
     return;
   }
   const btn = document.getElementById('aBtn');
@@ -290,7 +288,7 @@ function aplicar() {
   fb.style.opacity = '1';
 
   const msg = `posH:${posH},posF:${posF}`;
-  client.publish('heladera/set', msg);
+  client.publish(TOPIC_PREFIX+'/set', msg);
 
   const tH = tabH[posH], tF = tabF[posF];
   fb.textContent = `✔ Enviado — H:${tH.n}° a ${tH.x}° · F:${tF.n}° a ${tF.x}°`;
